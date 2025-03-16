@@ -13,7 +13,7 @@ async function analyzeSentiment() {
       });
 
       if (!response.ok) {
-          throw new Error(`Server error: ${'Error}`);
+          throw new Error(`Server error: ${'Error`});
       }
 
       const data = await response.json();
