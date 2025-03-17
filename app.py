@@ -1,65 +1,64 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-from nltk.sentiment import SentimentIntensityAnalyzer
-import nltk
+import matplotlib.pyplot as plt
+import io
+import base64
 from textblob import TextBlob
-import logging
+from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
-# Download required nltk resources
-nltk.download("vader_lexicon")
-nltk.download("punkt")
+app = Flask(__name__)
+CORS(app)
 
-# Initialize Flask app
-app = Flask(__name__, static_folder="static", template_folder="templates")
+def generate_graph(textblob_score, vader_score):
+    """Generates a transparent, centered sentiment graph with high contrast red and blue colors."""
+    plt.figure(figsize=(4, 3), dpi=120)
 
-# Enable CORS (Allow requests from any origin)
-CORS(app, resources={r"/analyze": {"origins": "*"}})
+    labels = ["TextBlob", "VADER"]
+    scores = [textblob_score, vader_score]
+    colors = ["#FF3333", "#3399FF"]
 
-# Initialize sentiment analyzer
-sia = SentimentIntensityAnalyzer()
+    bars = plt.bar(labels, scores, color=colors, alpha=0.85, edgecolor="white", linewidth=1.2)
+ 
+    for bar in bars:
+        bar.set_linewidth(1.2) 
+        bar.set_edgecolor("white")
 
-# Configure logging (useful for debugging on Render)
-logging.basicConfig(level=logging.INFO)
+    plt.axhline(0, color="white", linestyle="--", linewidth=1)
+    plt.ylim(-1, 1)
+    plt.xticks(fontsize=10, fontweight="bold", color="white")
+    plt.yticks(fontsize=9, color="white")
+    plt.ylabel("Sentiment Score", fontsize=10, fontweight="bold", color="white")
+    plt.title("Sentiment Analysis", fontsize=12, fontweight="bold", color="#FF3333")
+    plt.grid(axis="y", linestyle="--", alpha=0.3, color="white")
 
-@app.route("/")
-def index():
-    return render_template("index.html")
+    plt.gca().patch.set_alpha(0)
+
+    img_io = io.BytesIO()
+    plt.savefig(img_io, format='png', bbox_inches="tight", transparent=True)
+    plt.close()
+    img_io.seek(0)
+    return base64.b64encode(img_io.getvalue()).decode()
+
 
 @app.route("/analyze", methods=["POST"])
-def analyze_sentiment():
-    try:
-        data = request.get_json()
-        if not data or "text" not in data or not data["text"].strip():
-            return jsonify({"error": "Invalid input, please provide text"}), 400
+def analyze_text():
+    data = request.get_json()
+    text = data.get("text", "").strip()
 
-        text = data["text"]
-        logging.info(f"Received text: {text}")
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
 
-        # Sentiment Analysis
-        blob = TextBlob(text)
-        textblob_score = blob.sentiment.polarity
-        vader_score = sia.polarity_scores(text)["compound"]
+    textblob_score = TextBlob(text).sentiment.polarity
+    vader_score = SentimentIntensityAnalyzer().polarity_scores(text)["compound"]
 
-        # Determine sentiment
-        sentiment = "Neutral 😐"
-        if vader_score >= 0.05:
-            sentiment = "Positive 😀"
-        elif vader_score <= -0.05:
-            sentiment = "Negative 😡"
+    graph_url = generate_graph(textblob_score, vader_score)
 
-        response_data = {
-            "sentiment": sentiment,
-            "textblob_score": round(textblob_score, 2),
-            "vader_score": round(vader_score, 2),
-        }
+    return jsonify({
+        "sentiment": "Positive" if vader_score > 0 else "Negative" if vader_score < 0 else "Neutral",
+        "textblob_score": textblob_score,
+        "vader_score": vader_score,
+        "graph": f"data:image/png;base64,{graph_url}"
+    })
 
-        logging.info(f"Response Data: {response_data}")
-        return jsonify(response_data)
-
-    except Exception as e:
-        logging.error(f"ERROR in analyze_sentiment: {str(e)}")
-        return jsonify({"error": "Internal Server Error"}), 500
-
-# Ensure the app runs on Render
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=10000)
+    app.run(debug=True)
