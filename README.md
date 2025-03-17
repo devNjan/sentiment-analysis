@@ -14,7 +14,8 @@ It is useful for understanding the emotional tone of text and can be extended to
 • Modern Dark-Themed UI
 • Responsive and User-Friendly Design
 
-![UI Preview](screenshots/Screenshot1.png)
-![Graph Screenshot](screenshots/Screenshot2.png)
-![Graph Screenshot](screenshots/Screenshot3.png)
-![Graph Screenshot](screenshots/Screenshot4.png)
+![UI Preview](screenshots/Screenshot_1.png)
+![Graph Screenshot](screenshots/Screenshot_2.png)
+![Graph Screenshot](screenshots/Screenshot_3.png)
+![Graph Screenshot](screenshots/Screenshot_4.png)
+![Graph Screenshot](screenshots/Screenshot_5.png)
